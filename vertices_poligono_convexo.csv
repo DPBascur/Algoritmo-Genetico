@@ -1,0 +1,12 @@
+i_id,s_nombre,s_estado,s_partido,s_voto,f_x,f_y
+11066,"COLLINS, James Mitchell",TX,Republican Party,Yea,0.679,0.122
+10767,"SATTERFIELD, David Edward, III",VA,Democratic Party,Yea,0.265,0.831
+14291,"HALL, Sam Blakeley, Jr.",TX,Democratic Party,Yea,0.054,0.936
+7498,"POAGE, William Robert",TX,Democratic Party,Yea,-0.082,0.997
+10550,"ROBERTS, Herbert Ray",TX,Democratic Party,Yea,-0.131,0.991
+12004,"BURLISON, Bill D.",MO,Democratic Party,Yea,-0.475,0.88
+14265,"OBERSTAR, James Louis",MN,Democratic Party,Yea,-0.553,0.304
+10621,"ROYBAL, Edward R.",CA,Democratic Party,Yea,-0.61,-0.141
+13001,"ABZUG, Bella Savitzky",NY,Democratic Party,Yea,-0.597,-0.802
+11019,"GUDE, Gilbert",MD,Republican Party,Yea,-0.028,-0.88
+11051,"STEIGER, William Albert",WI,Republican Party,Yea,0.336,-0.76
