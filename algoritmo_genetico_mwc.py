@@ -1,27 +1,40 @@
 import numpy as np
 from scipy.spatial import ConvexHull
+from scipy.spatial.distance import pdist, squareform
 import random
+import json
 
 # Parámetros del problema
 diputados = 431
-quorum = 217
+quorum = 216
 poblacion_size = 100
 generaciones = 10000
 prob_mutacion = 0.15
 
-# Simulación de posiciones políticas en 2D (puedes cambiar la dimensión)
-posiciones = np.random.rand(diputados, 2)
+# Leer datos reales desde VoteData.json
+def cargar_datos_json(path="VoteData.json"):
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    diputados_yea = [v for v in data['rollcalls'][0]['votes']]
+    total_diputados = len(diputados_yea)
+    quorum = total_diputados // 2 + 1
+    posiciones = np.array([[d['x'], d['y']] for d in diputados_yea])
+    return diputados_yea, posiciones, total_diputados, quorum
+
+diputados_yea, posiciones, diputados, quorum = cargar_datos_json()
+
 # Matriz de distancias euclidianas
-from scipy.spatial.distance import pdist, squareform
 distancias = squareform(pdist(posiciones, metric='euclidean'))
 
-# Función de fitness: suma de distancias entre miembros de la coalición
+# Función de fitness: suma de distancias entre miembros de la coalición (usando pdist)
 def fitness(cromosoma):
     indices = np.where(cromosoma == 1)[0]
     if len(indices) < quorum:
         return 1e9  # Penalización fuerte si no cumple quórum
-    submatriz = distancias[np.ix_(indices, indices)]
-    return np.sum(submatriz) / 2  # Dividir entre 2 porque la matriz es simétrica
+    coords = posiciones[indices]
+    if len(coords) < 2:
+        return 0.0
+    return pdist(coords).sum()
 
 # Inicialización de la población
 def inicializar_poblacion():
