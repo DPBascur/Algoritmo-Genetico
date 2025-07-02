@@ -1,148 +1,157 @@
-import numpy as np
-from itertools import combinations
-import json
-import pandas as pd
-import random
-import matplotlib.pyplot as plt
-from scipy.spatial import ConvexHull
+import numpy as np  # Biblioteca para operaciones numéricas con arreglos
+from scipy.spatial import ConvexHull  # Para calcular el polígono convexo
+from scipy.spatial.distance import pdist, squareform  # Para calcular distancias euclidianas entre pares
+import random  # Para generación de aleatoriedad
+import json  # Para manejo de archivos JSON
+import os  # Para manejo de rutas del sistema
+import matplotlib.pyplot as plt  # Para generar gráficos
+import csv  # Para guardar resultados en archivos CSV
 
-# ==========================================
-# PARÁMETROS DEL ALGORITMO GENÉTICO
-# ==========================================
+# Parámetros globales del algoritmo genético
 
-s_Datos = "VoteData.json"
-i_tamanoPoblacion = 38
-i_tamanoCoalicion = 217
-i_generaciones = 10000
-f_tasaMutacion = 0.1700019
-f_porcentajeDiversidad = 0.2  # 20% de reinyección cada 10 generaciones
+iDiputados = 431  # Número total de diputados
+iQuorum = 216  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
+iPoblacionSize = 240  # Tamaño de la población en cada generación
+iGeneraciones = 10000  # Número máximo de generaciones del algoritmo
+tfProbMutacion = 0.02  # Probabilidad de aplicar mutación tipo swap en un cromosoma
 
-# ==========================================
-# FUNCIONES
-# ==========================================
+# Función para cargar los datos desde archivo JSON
+def fnCargarDatosJSON(strPath="VoteData.json"):
+    try:
+        fArchivo = open(strPath, 'r', encoding='utf-8')  # Intenta abrir archivo directamente
+    except FileNotFoundError:
+        strBase = os.path.dirname(__file__)  # Si falla, busca en el directorio del script actual
+        fArchivo = open(os.path.join(strBase, strPath), 'r', encoding='utf-8')
+    dictData = json.load(fArchivo)  # Cargar el contenido JSON como diccionario
+    fArchivo.close()
+    lstDiputados = [v for v in dictData['rollcalls'][0]['votes']]  # Extraer lista de diputados
+    iTotalDiputados = len(lstDiputados)  # Contar diputados
+    iQuorumCalculado = iTotalDiputados // 2 + 1  # Calcular quórum (mayoría absoluta)
+    matPosiciones = np.array([[d['x'], d['y']] for d in lstDiputados])  # Posiciones (x, y) de cada diputado
+    return lstDiputados, matPosiciones, iTotalDiputados, iQuorumCalculado
 
-def cargarDatosJson(s_Datos: str) -> pd.DataFrame:
-    with open(s_Datos, "r", encoding="utf-8") as f_archivo:
-        d_json = json.load(f_archivo)
-    l_votacion = d_json["rollcalls"][0]["votes"]
-    l_registros = []
-    for d in l_votacion:
-        l_registros.append({
-            "i_id": d.get("icpsr"),
-            "s_nombre": d.get("name"),
-            "s_estado": d.get("state_abbrev"),
-            "s_partido": d.get("party"),
-            "s_voto": d.get("vote"),
-            "f_x": d.get("x"),
-            "f_y": d.get("y")
-        })
-    df_datos = pd.DataFrame(l_registros)
-    return df_datos.dropna(subset=["f_x", "f_y"])
+# Cargar datos iniciales
+dlstDiputados, dmatPosiciones, diDiputados, diQuorum = fnCargarDatosJSON()
+dmatDistancias = squareform(pdist(dmatPosiciones, metric='euclidean'))  # Matriz de distancias entre diputados
 
+# Función de evaluación (fitness) de un cromosoma
+def fnFitness(arrCromosoma):
+    arrIdxMiembros = np.where(arrCromosoma == 1)[0]  # Obtener índices de diputados incluidos en la coalición
+    if len(arrIdxMiembros) < diQuorum:
+        return 1e9  # Penalización si no alcanza el quórum
+    if len(arrIdxMiembros) < 2:
+        return 0.0  # No hay distancia entre un solo individuo
+    matDistSub = dmatDistancias[np.ix_(arrIdxMiembros, arrIdxMiembros)]  # Submatriz de distancias internas
+    fSumaDistancias = matDistSub.sum() / 2.0  # Sumar distancias (dividir por 2 porque están duplicadas)
+    return fSumaDistancias
 
-def f_calcularFitnessCoalicion(l_iIDsCoalicion: list, df_d_diputados: pd.DataFrame) -> float:
-    df_d_coalicion = df_d_diputados[df_d_diputados["i_id"].isin(l_iIDsCoalicion)]
-    a_f_puntos = df_d_coalicion[["f_x", "f_y"]].values
-    return sum(np.linalg.norm(a_f_p1 - a_f_p2)
-               for a_f_p1, a_f_p2 in combinations(a_f_puntos, 2))
+# Inicialización de la población de cromosomas
+def fnInicializarPoblacion():
+    lstPoblacion = []
+    for _ in range(iPoblacionSize):
+        arrCromosoma = np.zeros(diDiputados, dtype=int)  # Crear vector binario de 0's
+        arrSeleccionados = np.random.choice(diDiputados, diQuorum, replace=False)  # Selección aleatoria
+        arrCromosoma[arrSeleccionados] = 1  # Marcar diputados seleccionados
+        lstPoblacion.append(arrCromosoma)
+    return np.array(lstPoblacion)
 
+# Selección por torneo binario
+def fnSeleccion(arrPoblacion, arrFitness):
+    iIndex1, iIndex2 = random.sample(range(iPoblacionSize), 2)  # Selección aleatoria de 2 individuos
+    return arrPoblacion[iIndex1] if arrFitness[iIndex1] < arrFitness[iIndex2] else arrPoblacion[iIndex2]
 
-def f_generarPoblacionInicial(i_tamanoPoblacion: int, i_tamanoCoalicion: int, l_i_idsDisponibles: list) -> list:
-    return [random.sample(l_i_idsDisponibles, i_tamanoCoalicion) for _ in range(i_tamanoPoblacion)]
+# Cruza que preserva intersección de padres y completa con genes únicos
+def fnCruzaMejorado(arrPadre1, arrPadre2):
+    arrComun = np.logical_and(arrPadre1, arrPadre2)  # Genes comunes entre padres
+    iComun = np.sum(arrComun)
+    arrHijo1 = arrComun.astype(int)
+    arrHijo2 = arrComun.astype(int)
+    iFaltantes = diQuorum - iComun
+    if iFaltantes > 0:
+        arrDiferencia = np.logical_xor(arrPadre1, arrPadre2)  # Genes únicos
+        idxOpciones = np.where(arrDiferencia == 1)[0]
+        np.random.shuffle(idxOpciones)  # Mezcla aleatoriamente los índices de opciones disponibles
+        seleccionHijo1 = idxOpciones[:iFaltantes]  # Selecciona los primeros faltantes para el hijo 1
+        seleccionHijo2 = idxOpciones[iFaltantes:2*iFaltantes] if len(idxOpciones) >= 2*iFaltantes else np.random.choice(idxOpciones, iFaltantes, replace=False)  # Selecciona para el hijo 2
+        arrHijo1[seleccionHijo1] = 1  # Asigna los seleccionados al hijo 1
+        arrHijo2[seleccionHijo2] = 1  # Asigna los seleccionados al hijo 2
+    return arrHijo1, arrHijo2  # Devuelve ambos hijos
 
+# Mutación por intercambio con probabilidad
+def fnMutarSwapProb(arrCromosoma):
+    if np.random.rand() < tfProbMutacion:  # Solo muta si se cumple la probabilidad
+        arrMiembros = np.where(arrCromosoma == 1)[0]  # Índices de miembros actuales
+        arrNoMiembros = np.where(arrCromosoma == 0)[0]  # Índices fuera de la coalición
+        if len(arrMiembros) > 0 and len(arrNoMiembros) > 0:  # Si hay miembros y no-miembros
+            iSalir = random.choice(arrMiembros)  # Elige un miembro al azar para salir
+            iEntrar = random.choice(arrNoMiembros)  # Elige un no-miembro al azar para entrar
+            arrCromosoma[iSalir] = 0  # Elimina el miembro seleccionado
+            arrCromosoma[iEntrar] = 1  # Agrega el nuevo miembro
+    return arrCromosoma  # Devuelve el cromosoma (mutado o no)
 
-def f_seleccionRuletaInversa(l_l_poblacion: list, l_f_fitness: list, i_numeroSeleccionados: int) -> list:
-    f_epsilon = 1e-6
-    a_f_inversos = np.array([1 / (f + f_epsilon) for f in l_f_fitness])
-    a_f_probabilidades = a_f_inversos / np.sum(a_f_inversos)
-    l_indicesSeleccionados = np.random.choice(len(l_l_poblacion), size=i_numeroSeleccionados, p=a_f_probabilidades, replace=True)
-    return [l_l_poblacion[i] for i in l_indicesSeleccionados]
+# Ciclo principal del algoritmo genético
+def fnAlgoritmoGenetico():
+    arrPoblacion = fnInicializarPoblacion()  # Inicializa la población
+    fMejorFitness = 1e9  # Inicializa el mejor fitness con un valor alto
+    arrMejorCromosoma = None  # Inicializa el mejor cromosoma
+    for iGen in range(iGeneraciones):  # Itera por el número de generaciones
+        arrFitnessPob = np.array([fnFitness(crom) for crom in arrPoblacion])  # Calcula fitness de cada individuo
+        iIdxMejor = np.argmin(arrFitnessPob)  # Índice del mejor individuo
+        if arrFitnessPob[iIdxMejor] < fMejorFitness:  # Si el mejor de la generación es mejor que el global
+            fMejorFitness = arrFitnessPob[iIdxMejor]  # Actualiza el mejor fitness global
+            arrMejorCromosoma = arrPoblacion[iIdxMejor].copy()  # Actualiza el mejor cromosoma global
+        lstNuevaPoblacion = [arrMejorCromosoma]  # Aplica elitismo: el mejor pasa directo
+        while len(lstNuevaPoblacion) < iPoblacionSize:  # Completa la nueva población
+            arrPadre1 = fnSeleccion(arrPoblacion, arrFitnessPob)  # Selecciona primer padre
+            arrPadre2 = fnSeleccion(arrPoblacion, arrFitnessPob)  # Selecciona segundo padre
+            arrHijo1, arrHijo2 = fnCruzaMejorado(arrPadre1, arrPadre2)  # Cruza padres para obtener hijos
+            arrHijo1 = fnMutarSwapProb(arrHijo1)  # Aplica mutación al hijo 1
+            arrHijo2 = fnMutarSwapProb(arrHijo2)  # Aplica mutación al hijo 2
+            lstNuevaPoblacion.extend([arrHijo1, arrHijo2])  # Añade hijos a la nueva población
+        arrPoblacion = np.array(lstNuevaPoblacion[:iPoblacionSize])  # Trunca si hay exceso de individuos
+        print(f"Generación {iGen+1}: Mejor fitness = {fMejorFitness:.6f} | Tamaño coalición = {np.sum(arrMejorCromosoma)}")  # Muestra progreso
+    return arrMejorCromosoma, fMejorFitness  # Devuelve el mejor cromosoma y su fitness
 
+# Función principal de ejecución
+def fnMain():
+    arrMejorCromosoma, fMejorFitness = fnAlgoritmoGenetico()  # Ejecuta el algoritmo genético
+    arrMiembros = np.where(arrMejorCromosoma == 1)[0]  # Obtiene los índices de los miembros de la coalición
+    matPuntosCoalicion = dmatPosiciones[arrMiembros]  # Obtiene las coordenadas de los miembros
+    if len(matPuntosCoalicion) > 2:
+        hullFinal = ConvexHull(matPuntosCoalicion)
+        arrVerticesRel = hullFinal.vertices
+        arrVerticesOriginal = arrMiembros[arrVerticesRel]
+    else:
+        arrVerticesOriginal = []
+    plt.figure(figsize=(6,6))
+    plt.scatter(dmatPosiciones[:,0], dmatPosiciones[:,1], c='lightgray', label='Diputados')
+    plt.scatter(matPuntosCoalicion[:,0], matPuntosCoalicion[:,1], c='blue', label='Miembro MWC')
+    if len(matPuntosCoalicion) > 2:
+        for simplex in hullFinal.simplices:
+            plt.plot(matPuntosCoalicion[simplex, 0], matPuntosCoalicion[simplex, 1], 'r-')
+        plt.scatter(matPuntosCoalicion[arrVerticesRel,0], matPuntosCoalicion[arrVerticesRel,1],
+                    c='red', marker='o', edgecolors='k', label='Vértices del Hull')
+    plt.xlabel('Dimensión 1')
+    plt.ylabel('Dimensión 2')
+    plt.title('Coalición Ganadora Mínima (MWC)')
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.savefig("coalicion_mwc.png")
+    with open("MWC_resultados.csv", "w", newline='', encoding="utf-8") as fCSV:
+        writer = csv.writer(fCSV)
+        writer.writerow(["Index", "Nombre", "Partido", "X", "Y", "EsVerticeHull"])
+        for idx in arrMiembros:
+            nombre = dlstDiputados[idx].get('name', '')
+            partido = dlstDiputados[idx].get('party_short_name', '')
+            x = dmatPosiciones[idx,0]
+            y = dmatPosiciones[idx,1]
+            es_vertice = 1 if (len(matPuntosCoalicion) > 2 and idx in arrVerticesOriginal) else 0
+            writer.writerow([idx, nombre, partido, f"{x:.4f}", f"{y:.4f}", es_vertice])
+    print("\nResultados finales:")
+    print(f"Fitness mínimo alcanzado: {fMejorFitness:.6f}")
+    print("Imagen de la coalición guardada en 'coalicion_mwc.png'")
+    print("Datos de la coalición guardados en 'MWC_resultados.csv'")
 
-def f_cruzarPadres(l_i_padre1: list, l_i_padre2: list, i_tamanoCoalicion: int, l_i_idsValidos: list) -> list:
-    s_padre1, s_padre2 = set(l_i_padre1), set(l_i_padre2)
-    s_comunes = s_padre1.intersection(s_padre2)
-    s_union_restante = list((s_padre1.union(s_padre2)) - s_comunes)
-    random.shuffle(s_union_restante)
-    l_i_hijo = list(s_comunes)
-    while len(l_i_hijo) < i_tamanoCoalicion and s_union_restante:
-        l_i_hijo.append(s_union_restante.pop())
-    while len(l_i_hijo) < i_tamanoCoalicion:
-        i_candidato = random.choice(l_i_idsValidos)
-        if i_candidato not in l_i_hijo:
-            l_i_hijo.append(i_candidato)
-    return l_i_hijo
-
-
-def f_mutarIndividuo(l_i_coalicion: list, l_i_idsValidos: list, f_tasaMutacion: float) -> list:
-    if random.random() < f_tasaMutacion:
-        l_i_mutada = l_i_coalicion.copy()
-        i_fuera = random.choice([i for i in l_i_idsValidos if i not in l_i_mutada])
-        i_dentro = random.choice(l_i_mutada)
-        l_i_mutada.remove(i_dentro)
-        l_i_mutada.append(i_fuera)
-        return l_i_mutada
-    return l_i_coalicion
-
-# ==========================================
-# EJECUCIÓN PRINCIPAL
-# ==========================================
-
-df_diputados = cargarDatosJson(s_Datos)
-df_activos = df_diputados[df_diputados["s_voto"] == "Yea"]
-l_i_idsValidos = df_activos["i_id"].tolist()
-
-l_l_poblacion = f_generarPoblacionInicial(i_tamanoPoblacion, i_tamanoCoalicion, l_i_idsValidos)
-f_mejorGlobalFitness = float("inf")
-l_i_mejorGlobalCoalicion = []
-
-for i_generacion in range(i_generaciones):
-    l_f_fitness = [f_calcularFitnessCoalicion(ind, df_activos) for ind in l_l_poblacion]
-    f_mejorFitness = min(l_f_fitness)
-    i_mejorIndex = l_f_fitness.index(f_mejorFitness)
-
-    if f_mejorFitness < f_mejorGlobalFitness:
-        f_mejorGlobalFitness = f_mejorFitness
-        l_i_mejorGlobalCoalicion = l_l_poblacion[i_mejorIndex].copy()
-
-    print(f"[Generación {i_generacion+1}] Mejor fitness: {f_mejorFitness:.2f}")
-
-    if i_generacion > 0 and i_generacion % 10 == 0:
-        i_nuevos = int(i_tamanoPoblacion * f_porcentajeDiversidad)
-        l_l_poblacion[:i_nuevos] = f_generarPoblacionInicial(i_nuevos, i_tamanoCoalicion, l_i_idsValidos)
-
-    l_l_padres = f_seleccionRuletaInversa(l_l_poblacion, l_f_fitness, i_tamanoPoblacion)
-    l_l_hijos = [f_cruzarPadres(random.choice(l_l_padres), random.choice(l_l_padres),
-                                i_tamanoCoalicion, l_i_idsValidos) for _ in range(i_tamanoPoblacion)]
-    l_l_mutados = [f_mutarIndividuo(hijo, l_i_idsValidos, f_tasaMutacion) for hijo in l_l_hijos]
-    i_pos = random.randint(0, i_tamanoPoblacion - 1)
-    l_l_mutados[i_pos] = l_i_mejorGlobalCoalicion.copy()
-    l_l_poblacion = l_l_mutados
-
-# ==========================================
-# RESULTADOS FINALES
-# ==========================================
-
-print(f"\n🎉 Mejor fitness global: {f_mejorGlobalFitness:.2f}")
-df_mwc = df_activos[df_activos["i_id"].isin(l_i_mejorGlobalCoalicion)].copy()
-a_f_puntos = df_mwc[["f_x", "f_y"]].values
-o_hull = ConvexHull(a_f_puntos)
-df_vertices = df_mwc.iloc[o_hull.vertices].copy()
-
-# Guardar como CSV
-df_mwc.to_csv("miembros_MWC.csv", index=False)
-df_vertices.to_csv("vertices_poligono_convexo.csv", index=False)
-
-# Visualización
-plt.figure(figsize=(8, 6))
-plt.scatter(df_mwc["f_x"], df_mwc["f_y"], alpha=0.6, label="Miembros MWC")
-hull_pts = df_vertices[["f_x", "f_y"]].values
-hull_pts = np.append(hull_pts, [hull_pts[0]], axis=0)
-plt.plot(hull_pts[:, 0], hull_pts[:, 1], 'r-', linewidth=2, label="Polígono Convexo")
-plt.title("Coalición Ganadora Mínima y su Polígono Convexo")
-plt.xlabel("DW-NOMINATE X")
-plt.ylabel("DW-NOMINATE Y")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+# Ejecutar si se llama directamente
+if __name__ == "__main__":
+    fnMain()
