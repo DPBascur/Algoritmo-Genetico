@@ -1,0 +1,110 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amsfonts}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\title{Informe de Estudio\\Algoritmo Genético para la Coalición Ganadora Mínima (MWC)}
+\author{INFO1159 – Ingeniería Civil en Informática}
+\date{Julio 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Descripción del Problema}
+
+El problema de la \textbf{Coalición Ganadora Mínima} (CGM o MWC, por sus siglas en inglés) se presenta en el contexto político de votaciones legislativas. Cada legislador tiene una posición ideológica representada por un punto en un espacio político bidimensional (modelo DW-NOMINATE). 
+
+Se busca identificar una coalición de $q$ congresistas (quórum requerido) tal que la \emph{suma de las distancias políticas entre sus miembros} sea mínima. Matemáticamente, se define:
+
+\begin{itemize}
+    \item Sea $P = \{p_1, p_2, \dots, p_n\}$ el conjunto de todos los congresistas, con $p_i = (X_i, Y_i)$ sus coordenadas en el espacio político.
+    \item Una coalición candidata es $G = \{g_1, g_2, \dots, g_q\} \subset P$ de tamaño $q$.
+    \item La función objetivo a minimizar es la suma de distancias euclídeas:
+    \[
+        Z(G) = \sum_{1 \le i < j \le q} d(g_i, g_j)
+    \]
+    donde $d(g_i, g_j)$ es la distancia euclídea.
+    \item El objetivo es encontrar:
+    \[
+        G^* = \arg\min_{G \subset P,\ |G| = q} Z(G)
+    \]
+\end{itemize}
+
+Este problema es NP-Hard y se asemeja al \emph{Min-Sum 2-Clustering Euclídeo} con restricción de tamaño. Por tanto, se abordan mediante heurísticas como algoritmos genéticos.
+
+\section{Descripción del Algoritmo Genético}
+
+El algoritmo genético diseñado para resolver el problema implementa los siguientes componentes:
+
+\subsection*{Codificación}
+Cada individuo (cromosoma) representa una coalición de $q$ congresistas mediante un vector binario de longitud $n$, con exactamente $q$ unos.
+
+\subsection*{Función objetivo}
+El fitness de cada individuo es el valor $Z(G)$, es decir, la suma total de distancias euclídeas entre los miembros de la coalición.
+
+\subsection*{Operadores genéticos}
+\begin{itemize}
+    \item \textbf{Selección:} Se seleccionan individuos para reproducirse según su fitness (mejor $Z(G)$).
+    \item \textbf{Cruce:} Se combinan cromosomas manteniendo la restricción de tener $q$ unos.
+    \item \textbf{Mutación:} Se reemplazan aleatoriamente miembros de la coalición por otros fuera de ella.
+\end{itemize}
+
+\subsection*{Parámetros}
+\begin{itemize}
+    \item Tamaño de la población: 38
+    \item Tasa de mutación: 0.1700
+    \item Tasa de cruce: 0.141
+    \item Iteraciones: 10\,000 repeticiones
+\end{itemize}
+
+\subsection*{Flujo del algoritmo}
+\begin{enumerate}
+    \item Generar una población inicial aleatoria de soluciones válidas.
+    \item Evaluar el fitness de cada individuo.
+    \item Seleccionar padres y generar hijos por cruce y mutación.
+    \item Repetir hasta alcanzar un número máximo de iteraciones o convergencia.
+\end{enumerate}
+
+\section{Resultados Obtenidos y Comparación}
+
+\subsection*{Instancia: Rollcall RH0941234 (75º Congreso)}
+\begin{itemize}
+    \item Participaron 431 congresistas.
+    \item Quórum requerido: $q = 216$
+\end{itemize}
+
+\subsection*{Resultados del algoritmo genético}
+\begin{itemize}
+    \item Mejor fitness alcanzado: $Z(G^*) \approx 9686.93831$
+    \item Convergencia al óptimo en 91.41\% de las ejecuciones
+    \item Iteraciones promedio: 15\,315 (±2326)
+    \item Tiempo promedio: 26.50 segundos (±4.08 s)
+\end{itemize}
+
+\subsection*{Comparación con algoritmo ad-hoc}
+El algoritmo ad-hoc presentado en el paper alcanza la misma solución en 0.1 segundos usando búsqueda local basada en el polígono convexo. El algoritmo genético es más costoso en tiempo, pero igualmente preciso en resultados.
+
+\section{MWC y Polígono Convexo Resultante}
+
+La coalición ganadora mínima $G^*$ identificada incluye:
+\begin{itemize}
+    \item 199 demócratas
+    \item 17 republicanos
+\end{itemize}
+
+Durante la búsqueda local se reemplazaron congresistas extremos (vértices del polígono convexo) por miembros más cercanos al centroide:
+\begin{itemize}
+    \item Gillis W. Long (Demócrata, Louisiana) fue reemplazado por Albert W. Johnson (Republicano, Pennsylvania).
+    \item Henry B. González (Demócrata, Texas) fue reemplazado por Matthew J. Rinaldo (Republicano, New Jersey).
+\end{itemize}
+
+El polígono convexo que contiene a la MWC se construye con los puntos extremos ideológicos, y los reemplazos en sus vértices permitieron mejorar la cohesión interna de la coalición.
+
+\section*{Conclusión}
+
+El algoritmo genético implementado resuelve con éxito el problema de la CGM, convergiendo en la mayoría de los casos a la solución óptima encontrada también por métodos deterministas. La implementación es útil en instancias grandes donde métodos exactos son inviables, aunque puede optimizarse en tiempo.
+
+\end{document}

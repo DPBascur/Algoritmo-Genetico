@@ -1,0 +1,129 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\geometry{margin=2.5cm}
+\title{Análisis de Resultados: Resolución de la Coalición Ganadora Mínima (CGM)}
+\author{Basado en Lincolao-Venegas et al. (2023)}
+\date{Julio 2025}
+
+\begin{document}
+
+\maketitle
+
+\section*{Contexto del Problema}
+
+El objetivo es encontrar una \textbf{coalición ganadora mínima} (MWC o CGM) de congresistas, es decir, un subconjunto de tamaño $q$ (quórum requerido) tal que la \emph{suma total de las distancias políticas entre sus miembros sea mínima}. Estas distancias se calculan como distancias euclídeas en el espacio político bidimensional obtenido mediante DW-NOMINATE.
+
+\section*{Caso de Estudio: Votación RH0941234 (75º Congreso de EE.UU.)}
+
+\begin{itemize}
+    \item \textbf{Congresistas:} 431 representantes.
+    \item \textbf{Quórum absoluto requerido:} $q = 216$
+    \item \textbf{Datos:} Posiciones DW-NOMINATE descargadas desde \texttt{voteview.com}
+    \item \textbf{Motivo de elección:} Bajo nivel de polarización política, ideal para validar la heurística.
+\end{itemize}
+
+\section*{1. Construcción de Coaliciones Iniciales}
+
+Para cada congresista $p_i$, se generó una coalición $G_i$ formada por los 215 congresistas más cercanos a $p_i$ (según distancia euclídea) junto con él mismo, resultando en 431 coaliciones iniciales.
+
+\begin{itemize}
+    \item Se evaluó el \textbf{fitness} $Z(G_i)$ como la suma de todas las distancias euclídeas entre los pares de miembros de la coalición.
+    \item Se eligió como mejor candidato inicial la coalición centrada en \textbf{Tim Lee Hall} (Demócrata, Illinois) con:
+    \[
+    Z(G_c) \approx 9689.948859
+    \]
+    \item Composición: Mayoritariamente Demócratas, con solo 15 Republicanos.
+\end{itemize}
+
+\section*{2. Mejora por Búsqueda Local y Polígono Convexo}
+
+Se aplicó una heurística de búsqueda local sobre el \textbf{polígono convexo} de la coalición inicial $G_c$:
+
+\begin{enumerate}
+    \item Construcción del polígono convexo $H$ de $G_c$ (usando el algoritmo de Graham).
+    \item Cálculo del centroide $C$.
+    \item Ordenar los vértices de $H$ según su distancia a $C$ (de mayor a menor).
+    \item Buscar reemplazos en el conjunto de congresistas fuera de $G_c$ que estén dentro de un radio proporcional al vértice más alejado ($\alpha \cdot r$).
+    \item Si se encuentra un reemplazo que mejora el fitness, se actualiza la coalición y se repite el proceso.
+\end{enumerate}
+
+\section*{3. Iteraciones del Algoritmo de Mejora}
+
+\subsection*{Primera Iteración}
+\begin{itemize}
+    \item Se reemplazó a \textbf{Gillis W. Long} (Demócrata del Sur) por \textbf{Albert W. Johnson} (Republicano, Pennsylvania).
+    \item Nuevo fitness:
+    \[
+    Z(G_c) = 9688.493662454
+    \]
+\end{itemize}
+
+\subsection*{Segunda Iteración}
+\begin{itemize}
+    \item Se reemplazó a \textbf{Henry B. González} (Demócrata, Texas) por \textbf{Matthew J. Rinaldo} (Republicano, New Jersey).
+    \item Nuevo fitness:
+    \[
+    Z(G_c) = 9686.938309982
+    \]
+    Coincide con el valor alcanzado por el algoritmo genético.
+\end{itemize}
+
+\subsection*{Tercera Iteración}
+\begin{itemize}
+    \item No se encontraron reemplazos que mejoraran la coalición. Se alcanzó convergencia.
+\end{itemize}
+
+\subsection*{Coalición Final}
+\begin{itemize}
+    \item 199 Demócratas
+    \item 17 Republicanos
+    \item Fitness final:
+    \[
+    Z(G^*) = 9686.938309982
+    \]
+\end{itemize}
+
+\section*{4. Comparación con el Algoritmo Genético (GA)}
+
+\begin{itemize}
+    \item \textbf{Tamaño de población:} 38
+    \item \textbf{Tasa de mutación:} 0.1700019
+    \item \textbf{Tasa de selección:} 0.141
+    \item \textbf{Iteraciones promedio:} 15\,315
+    \item \textbf{Tiempo promedio:} 26.5 segundos
+    \item \textbf{Fitness óptimo alcanzado:}
+    \[
+    Z(G^*) = 9686.93831 \quad (\text{91.41\% de las ejecuciones})
+    \]
+\end{itemize}
+
+\textbf{Comparación:} El algoritmo ad-hoc fue $\sim$265 veces más rápido (0.1 segundos) y alcanzó el mismo valor óptimo que el GA.
+
+\section*{5. Observaciones Técnicas}
+
+\begin{itemize}
+    \item El uso del \textbf{polígono convexo} permitió identificar los miembros más extremos y sustituirlos por congresistas ideológicamente más cercanos al centroide.
+    \item La mejora del fitness fue guiada por la estructura geométrica del espacio político.
+    \item El algoritmo convergió en 2 iteraciones de mejora, validando la eficacia de la heurística.
+\end{itemize}
+
+\section*{6. Implementación}
+
+\begin{itemize}
+    \item Lenguaje: C++
+    \item Compiladores: \texttt{CMake 3.22.1}, \texttt{GCC 7.5.0}
+    \item Sistema operativo: openSUSE Leap 15.2
+    \item Plataforma: Servidor Lenovo ThinkSystem SR530, 2x Intel Xeon Gold 5220
+    \item Código fuente disponible: \url{https://github.com/vicquiroz/MWC.git}
+\end{itemize}
+
+\section*{Conclusión}
+
+La Sección VII del artículo demuestra que el problema de la CGM puede resolverse eficazmente con un algoritmo determinista basado en construcción heurística y mejora local. La convergencia rápida y la coincidencia con la solución del algoritmo genético validan su efectividad tanto en precisión como en eficiencia computacional.
+
+\end{document}
