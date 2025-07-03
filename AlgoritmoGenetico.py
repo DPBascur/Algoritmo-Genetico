@@ -11,9 +11,9 @@ import csv  # Para guardar resultados en archivos CSV
 
 iDiputados = 431  # Número total de diputados
 iQuorum = 216  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
-iPoblacionSize = 240  # Tamaño de la población en cada generación
+iPoblacionSize = 38  # Tamaño de la población en cada generación
 iGeneraciones = 10000  # Número máximo de generaciones del algoritmo
-tfProbMutacion = 0.02  # Probabilidad de aplicar mutación tipo swap en un cromosoma
+tfProbMutacion = 0.1700019  # Probabilidad de aplicar mutación tipo swap en un cromosoma
 
 # Función para cargar los datos desde archivo JSON
 def fnCargarDatosJSON(strPath="VoteData.json"):
@@ -131,8 +131,8 @@ def fnMain():
             plt.plot(matPuntosCoalicion[simplex, 0], matPuntosCoalicion[simplex, 1], 'r-')
         plt.scatter(matPuntosCoalicion[arrVerticesRel,0], matPuntosCoalicion[arrVerticesRel,1],
                     c='red', marker='o', edgecolors='k', label='Vértices del Hull')
-    plt.xlabel('Dimensión 1')
-    plt.ylabel('Dimensión 2')
+    plt.xlabel('Dimensión económica (izquierda–derecha)')
+    plt.ylabel('Dimensión social (progresismo–conservadurismo)')
     plt.title('Coalición Ganadora Mínima (MWC)')
     plt.legend(loc='best')
     plt.tight_layout()
