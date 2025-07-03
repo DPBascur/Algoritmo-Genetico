@@ -10,7 +10,7 @@ import csv  # Para guardar resultados en archivos CSV
 # Parámetros globales del algoritmo genético
 
 iDiputados = 431  # Número total de diputados
-iQuorum = 216  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
+iQuorum = 217  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
 iPoblacionSize = 38  # Tamaño de la población en cada generación
 iGeneraciones = 10000  # Número máximo de generaciones del algoritmo
 tfProbMutacion = 0.1700019  # Probabilidad de aplicar mutación tipo swap en un cromosoma
