@@ -120,6 +120,7 @@ Index,Nombre,Partido,X,Y,EsVerticeHull
 240,"HELSTOSKI, Henry",Democrat,-0.4840,-0.3480,0
 241,"RODINO, Peter Wallace, Jr.",Democrat,-0.4350,-0.2240,0
 242,"MINISH, Joseph George",Democrat,-0.2990,-0.0980,0
+243,"RINALDO, Matthew John",Republican,0.0230,-0.3920,1
 244,"MEYNER, Helen Stevenson",Democrat,-0.4110,-0.2620,0
 245,"DANIELS, Dominick Vincent",Democrat,-0.3860,0.1000,0
 246,"PATTEN, Edward James",Democrat,-0.4240,0.2430,0
@@ -128,7 +129,6 @@ Index,Nombre,Partido,X,Y,EsVerticeHull
 251,"AMBRO, Jerome Anthony, Jr.",Democrat,-0.1900,-0.0980,0
 254,"WOLFF, Lester Lionel",Democrat,-0.2640,-0.2930,0
 255,"ADDABBO, Joseph Patrick",Democrat,-0.4020,-0.0840,0
-256,"ROSENTHAL, Benjamin Stanley",Democrat,-0.5620,-0.4910,1
 257,"DELANEY, James Joseph",Democrat,-0.3030,0.1990,0
 258,"BIAGGI, Mario",Democrat,-0.3390,0.1970,0
 259,"SCHEUER, James Haas",Democrat,-0.4780,-0.3490,0
@@ -137,7 +137,7 @@ Index,Nombre,Partido,X,Y,EsVerticeHull
 263,"ZEFERETTI, Leo C.",Democrat,-0.3050,0.2850,0
 265,"MURPHY, John Michael",Democrat,-0.4060,0.3860,0
 267,"RANGEL, Charles B.",Democrat,-0.5140,-0.3410,0
-270,"BINGHAM, Jonathan Brewster",Democrat,-0.5090,-0.4880,0
+270,"BINGHAM, Jonathan Brewster",Democrat,-0.5090,-0.4880,1
 271,"PEYSER, Peter A.",Republican,-0.0550,-0.3140,0
 275,"McHUGH, Matthew Francis",Democrat,-0.3530,-0.2270,0
 276,"STRATTON, Samuel Studdiford",Democrat,-0.1390,0.2080,0
@@ -145,7 +145,7 @@ Index,Nombre,Partido,X,Y,EsVerticeHull
 279,"MITCHELL, Donald Jerome",Republican,0.0970,-0.1630,0
 280,"HANLEY, James Michael",Democrat,-0.3060,0.1470,0
 281,"WALSH, William Francis",Republican,0.0680,-0.0920,0
-282,"HORTON, Frank Jefferson",Republican,-0.0040,-0.3590,1
+282,"HORTON, Frank Jefferson",Republican,-0.0040,-0.3590,0
 284,"LaFALCE, John Joseph",Democrat,-0.3570,0.1120,0
 285,"NOWAK, Henry James",Democrat,-0.3320,-0.1230,0
 287,"LUNDINE, Stanley Nelson",Democrat,-0.3100,-0.2730,0

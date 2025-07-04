@@ -10,7 +10,7 @@ import csv  # Para guardar resultados en archivos CSV
 # Parámetros globales del algoritmo genético
 
 iDiputados = 431  # Número total de diputados
-iQuorum = 217  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
+iQuorum = 216  # Cantidad mínima para formar una coalición válida (mayoría absoluta)
 iPoblacionSize = 38  # Tamaño de la población en cada generación
 iGeneraciones = 10000  # Número máximo de generaciones del algoritmo
 tfProbMutacion = 0.1700019  # Probabilidad de aplicar mutación tipo swap en un cromosoma
@@ -87,7 +87,7 @@ def fnMutarSwapProb(arrCromosoma):
             iEntrar = random.choice(arrNoMiembros)  # Elige un no-miembro al azar para entrar
             arrCromosoma[iSalir] = 0  # Elimina el miembro seleccionado
             arrCromosoma[iEntrar] = 1  # Agrega el nuevo miembro
-    return arrCromosoma  # Devuelve el cromosoma (mutado o no)
+    return arrCromosoma  # Devuelve el cromosoma (mutado o no
 
 # Ciclo principal del algoritmo genético
 def fnAlgoritmoGenetico():
